@@ -10,10 +10,10 @@ sys.path.insert(0, os.path.join(ROOT_DIR, "lib"))
 from poster_lib import (  # noqa: E402
     search_tmdb,
     get_details,
-    fetch_backdrop_bytes,
-    render_poster,
+    fetch_poster_bytes,
+    render_card,
     build_caption,
-    DEFAULT_WATERMARKS,
+    SITE_WATERMARK,
 )
 
 app = FastAPI()
@@ -45,9 +45,9 @@ def generate(id: str = "", type: str = "movie"):
         return JSONResponse({"error": "Missing 'id' query param"}, status_code=400)
     try:
         details = get_details(id, media_type)
-        backdrop_bytes = fetch_backdrop_bytes(id, media_type)
-        watermark = DEFAULT_WATERMARKS.get(media_type, "YourSite")
-        image_bytes = render_poster(backdrop_bytes, watermark)
+        poster_bytes = fetch_poster_bytes(id, media_type)
+        watermark = SITE_WATERMARK.get(media_type, "MyStream")
+        image_bytes = render_card(details, watermark, poster_bytes)
         caption = build_caption(details, media_type)
         image_b64 = base64.b64encode(image_bytes).decode("ascii")
         return {
