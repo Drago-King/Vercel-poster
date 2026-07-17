@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poster Generator</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #0d0d12; color: #eee; margin: 0; padding: 24px 16px 60px;
+  }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  .row { display: flex; gap: 8px; margin-bottom: 16px; }
+  input, select, button {
+    font-size: 15px; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid #333; background: #1a1a22; color: #eee;
+  }
+  input { flex: 1; min-width: 0; }
+  button { background: #1d7ae3; border: none; cursor: pointer; font-weight: 600; }
+  button:disabled { opacity: .5; }
+  #results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .result {
+    display: flex; align-items: center; gap: 10px; padding: 8px;
+    background: #16161d; border-radius: 8px; cursor: pointer;
+  }
+  .result:hover { background: #1e1e28; }
+  .result img { width: 40px; height: 60px; object-fit: cover; border-radius: 4px; background: #333; }
+  #output { max-width: 640px; }
+  #output img { width: 100%; border-radius: 10px; display: block; margin-bottom: 12px; }
+  #caption {
+    white-space: pre-wrap; background: #16161d; padding: 14px; border-radius: 8px;
+    font-size: 14px; line-height: 1.5;
+  }
+  #caption b { color: #fff; }
+  #caption blockquote { border-left: 3px solid #1d7ae3; margin: 8px 0; padding-left: 10px; color: #ccc; }
+  .actions { display: flex; gap: 8px; margin-top: 10px; }
+  #status { font-size: 13px; color: #999; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+  <h1>Poster Generator</h1>
+
+  <div class="row">
+    <input id="query" placeholder="Search a movie or show…" />
+    <select id="type">
+      <option value="movie">Movie</option>
+      <option value="tv">TV</option>
+    </select>
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+  <div id="output"></div>
+
+<script>
+const el = (id) => document.getElementById(id);
+
+async function search() {
+  const q = el("query").value.trim();
+  const type = el("type").value;
+  if (!q) return;
+  el("status").textContent = "Searching…";
+  el("results").innerHTML = "";
+  el("output").innerHTML = "";
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}`);
+    const data = await res.json();
+    if (data.error) { el("status").textContent = "Error: " + data.error; return; }
+    el("status").textContent = data.results.length ? "Pick a title:" : "No results.";
+    el("results").innerHTML = data.results.map(r => `
+      <div class="result" onclick="generate(${r.id}, '${type}')">
+        <img src="${r.thumb || ''}" onerror="this.style.visibility='hidden'" />
+        <div>${r.title} ${r.year ? "(" + r.year + ")" : ""}</div>
+      </div>
+    `).join("");
+  } catch (e) {
+    el("status").textContent = "Error: " + e.message;
+  }
+}
+
+async function generate(id, type) {
+  el("status").textContent = "Generating poster…";
+  el("output").innerHTML = "";
+  try {
+    const res = await fetch(`/api/generate?id=${id}&type=${type}`);
+    const data = await res.json();
+    if (data.error) { el("status").textContent = "Error: " + data.error; return; }
+    el("status").textContent = "";
+    el("output").innerHTML = `
+      <img src="${data.image}" alt="${data.title}" />
+      <div id="caption">${data.caption}</div>
+      <div class="actions">
+        <a href="${data.image}" download="${data.title.replace(/\s+/g,'_')}_poster.jpg">
+          <button>Download image</button>
+        </a>
+      </div>
+    `;
+  } catch (e) {
+    el("status").textContent = "Error: " + e.message;
+  }
+}
+
+el("searchBtn").addEventListener("click", search);
+el("query").addEventListener("keydown", (e) => { if (e.key === "Enter") search(); });
+</script>
+</body>
+</html>
