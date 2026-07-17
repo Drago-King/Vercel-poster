@@ -3,9 +3,10 @@ import os
 import sys
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT_DIR, "lib"))
 from poster_lib import (  # noqa: E402
     search_tmdb,
     get_details,
@@ -16,6 +17,12 @@ from poster_lib import (  # noqa: E402
 )
 
 app = FastAPI()
+
+
+@app.get("/", response_class=HTMLResponse)
+def root():
+    with open(os.path.join(ROOT_DIR, "index.html"), "r", encoding="utf-8") as f:
+        return f.read()
 
 
 @app.get("/api/search")
